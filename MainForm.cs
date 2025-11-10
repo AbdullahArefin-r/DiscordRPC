@@ -37,6 +37,16 @@ namespace DiscordActivityMonitor
         private string configPath = Path.Combine(Path.GetTempPath(), "DiscordActivityMonitor_config.txt");
         private System.Windows.Forms.Button? saveButton;
         
+        // Button configuration
+        private TextBox? button1TextBox;
+        private TextBox? button1UrlBox;
+        private TextBox? button2TextBox;
+        private TextBox? button2UrlBox;
+        public string Button1Label { get; private set; } = "";
+        public string Button1Url { get; private set; } = "";
+        public string Button2Label { get; private set; } = "";
+        public string Button2Url { get; private set; } = "";
+        
         // Clean dark color palette
         private static class Colors
         {
@@ -62,14 +72,14 @@ namespace DiscordActivityMonitor
         {
             // Form settings - clean and simple
             this.Text = "Discord Activity Monitor";
-            this.Size = new Size(600, 500);
+            this.Size = new Size(600, 650);
             this.FormBorderStyle = FormBorderStyle.None;
             this.BackColor = Colors.Background;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.MaximumSize = new Size(600, 500);
-            this.MinimumSize = new Size(600, 500);
+            this.MaximumSize = new Size(600, 650);
+            this.MinimumSize = new Size(600, 650);
             
             // Title bar - minimal
             titleBar = new Panel
@@ -248,11 +258,124 @@ namespace DiscordActivityMonitor
             settingsPanel.Controls.Add(connectButton);
             settingsPanel.Controls.Add(saveButton);
             
+            // Buttons Panel - for Discord RPC buttons
+            var buttonsPanel = new Panel
+            {
+                Location = new Point(20, 245),
+                Size = new Size(this.Width - 40, 135),
+                BackColor = Colors.Surface
+            };
+            buttonsPanel.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using (var path = GetRoundedRect(buttonsPanel.ClientRectangle, 8))
+                {
+                    e.Graphics.FillPath(new SolidBrush(Colors.Surface), path);
+                    e.Graphics.DrawPath(new Pen(Colors.Border), path);
+                }
+            };
+            
+            var buttonsTitle = new Label
+            {
+                Text = "RPC Buttons (Optional)",
+                ForeColor = Colors.TextMuted,
+                Font = new Font("Segoe UI", 8),
+                Location = new Point(15, 12),
+                AutoSize = true
+            };
+            
+            // Button 1 inputs
+            var button1Label = new Label
+            {
+                Text = "Button 1:",
+                ForeColor = Colors.Text,
+                Font = new Font("Segoe UI", 8),
+                Location = new Point(15, 35),
+                Size = new Size(60, 20)
+            };
+            
+            button1TextBox = new TextBox
+            {
+                Location = new Point(80, 35),
+                Size = new Size(200, 24),
+                BackColor = Colors.Background,
+                ForeColor = Colors.Text,
+                Font = new Font("Consolas", 9),
+                BorderStyle = BorderStyle.FixedSingle,
+                PlaceholderText = "Button Text"
+            };
+            button1TextBox.TextChanged += (s, e) => { Button1Label = button1TextBox.Text.Trim(); };
+            
+            button1UrlBox = new TextBox
+            {
+                Location = new Point(290, 35),
+                Size = new Size(270, 24),
+                BackColor = Colors.Background,
+                ForeColor = Colors.Text,
+                Font = new Font("Consolas", 9),
+                BorderStyle = BorderStyle.FixedSingle,
+                PlaceholderText = "https://example.com"
+            };
+            button1UrlBox.TextChanged += (s, e) => { Button1Url = button1UrlBox.Text.Trim(); };
+            
+            // Button 2 inputs
+            var button2Label = new Label
+            {
+                Text = "Button 2:",
+                ForeColor = Colors.Text,
+                Font = new Font("Segoe UI", 8),
+                Location = new Point(15, 70),
+                Size = new Size(60, 20)
+            };
+            
+            button2TextBox = new TextBox
+            {
+                Location = new Point(80, 70),
+                Size = new Size(200, 24),
+                BackColor = Colors.Background,
+                ForeColor = Colors.Text,
+                Font = new Font("Consolas", 9),
+                BorderStyle = BorderStyle.FixedSingle,
+                PlaceholderText = "Button Text"
+            };
+            button2TextBox.TextChanged += (s, e) => { Button2Label = button2TextBox.Text.Trim(); };
+            
+            button2UrlBox = new TextBox
+            {
+                Location = new Point(290, 70),
+                Size = new Size(270, 24),
+                BackColor = Colors.Background,
+                ForeColor = Colors.Text,
+                Font = new Font("Consolas", 9),
+                BorderStyle = BorderStyle.FixedSingle,
+                PlaceholderText = "https://example.com"
+            };
+            button2UrlBox.TextChanged += (s, e) => { Button2Url = button2UrlBox.Text.Trim(); };
+            
+            // Info label
+            var buttonInfo = new Label
+            {
+                Text = "💡 Add clickable buttons to your Discord RPC (max 2 buttons)",
+                ForeColor = Colors.TextMuted,
+                Font = new Font("Segoe UI", 7),
+                Location = new Point(15, 105),
+                AutoSize = true
+            };
+            
+            buttonsPanel.Controls.Add(buttonsTitle);
+            buttonsPanel.Controls.Add(button1Label);
+            buttonsPanel.Controls.Add(button1TextBox);
+            buttonsPanel.Controls.Add(button1UrlBox);
+            buttonsPanel.Controls.Add(button2Label);
+            buttonsPanel.Controls.Add(button2TextBox);
+            buttonsPanel.Controls.Add(button2UrlBox);
+            buttonsPanel.Controls.Add(buttonInfo);
+            
             // Log - minimal
             var logPanel = new Panel
             {
-                Location = new Point(20, 245),
-                Size = new Size(this.Width - 40, this.Height - 275),
+                Location = new Point(20, 395),
+                Size = new Size(this.Width - 40, this.Height - 425),
                 BackColor = Colors.Surface
             };
             logPanel.Paint += (s, e) =>
@@ -299,6 +422,7 @@ namespace DiscordActivityMonitor
             this.Controls.Add(userLabel);
             this.Controls.Add(currentIconBox);
             this.Controls.Add(settingsPanel);
+            this.Controls.Add(buttonsPanel);
             this.Controls.Add(logPanel);
             
             AddLog("Discord Activity Monitor", Colors.Primary);
@@ -413,7 +537,8 @@ namespace DiscordActivityMonitor
                     
                     monitor = new ActivityMonitor(client, 
                         (msg, color) => AddLog(msg, color),
-                        (icon) => UpdateCurrentIcon(icon));
+                        (icon) => UpdateCurrentIcon(icon),
+                        () => (Button1Label, Button1Url, Button2Label, Button2Url));
                     
                     if (updateTimer == null)
                     {

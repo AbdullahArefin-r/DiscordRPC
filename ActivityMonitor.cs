@@ -13,6 +13,7 @@ namespace DiscordActivityMonitor
         private readonly DiscordRpcClient client;
         private readonly Action<string, Color>? logCallback;
         private readonly Action<Image?>? iconCallback;
+        private readonly Func<(string, string, string, string)>? getButtonsCallback;
         private string lastActivity = "";
         private string lastIconIdentifier = "";
         private DateTime startTime = DateTime.UtcNow;
@@ -26,11 +27,12 @@ namespace DiscordActivityMonitor
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
-        public ActivityMonitor(DiscordRpcClient rpcClient, Action<string, Color>? callback = null, Action<Image?>? iconCallback = null)
+        public ActivityMonitor(DiscordRpcClient rpcClient, Action<string, Color>? callback = null, Action<Image?>? iconCallback = null, Func<(string, string, string, string)>? buttonsCallback = null)
         {
             client = rpcClient;
             logCallback = callback;
             this.iconCallback = iconCallback;
+            this.getButtonsCallback = buttonsCallback;
         }
 
         public void Update()
@@ -153,6 +155,28 @@ namespace DiscordActivityMonitor
             {
                 Start = startTime
             };
+
+            // Add buttons if configured
+            if (getButtonsCallback != null)
+            {
+                var (btn1Label, btn1Url, btn2Label, btn2Url) = getButtonsCallback();
+                var buttons = new List<DiscordRPC.Button>();
+                
+                if (!string.IsNullOrWhiteSpace(btn1Label) && !string.IsNullOrWhiteSpace(btn1Url))
+                {
+                    buttons.Add(new DiscordRPC.Button { Label = btn1Label, Url = btn1Url });
+                }
+                
+                if (!string.IsNullOrWhiteSpace(btn2Label) && !string.IsNullOrWhiteSpace(btn2Url))
+                {
+                    buttons.Add(new DiscordRPC.Button { Label = btn2Label, Url = btn2Url });
+                }
+                
+                if (buttons.Count > 0)
+                {
+                    presence.Buttons = buttons.ToArray();
+                }
+            }
 
             try
             {
